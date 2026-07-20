@@ -1,28 +1,3 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2017-2025 Joe Testa (jtesta@positronsecurity.com)
-   Copyright (C) 2017 Andris Raugulis (moo@arthepsy.eu)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
-# pylint: disable=unused-import
 from typing import Dict, List, Set, Sequence, Tuple, Iterable  # noqa: F401
 from typing import Callable, Optional, Union, Any  # noqa: F401
 
@@ -41,18 +16,11 @@ class Algorithms:
 
     @property
     def ssh2kex(self) -> Optional[SSH2_Kex]:
-        return self.__ssh2kex
+        pass
 
     @property
     def ssh2(self) -> Optional['Algorithms.Item']:
-        if self.ssh2kex is None:
-            return None
-        item = Algorithms.Item(2, SSH2_KexDB.get_db())
-        item.add('kex', self.ssh2kex.kex_algorithms)
-        item.add('key', self.ssh2kex.key_algorithms)
-        item.add('enc', self.ssh2kex.server.encryption)
-        item.add('mac', self.ssh2kex.server.mac)
-        return item
+        pass
 
     @property
     def values(self) -> Iterable['Algorithms.Item']:
@@ -62,16 +30,7 @@ class Algorithms:
 
     @property
     def maxlen(self) -> int:
-        def _ml(items: Sequence[str]) -> int:
-            return max(len(i) for i in items)
-        maxlen = 0
-        if self.ssh2kex is not None:
-            maxlen = max(_ml(self.ssh2kex.kex_algorithms),
-                         _ml(self.ssh2kex.key_algorithms),
-                         _ml(self.ssh2kex.server.encryption),
-                         _ml(self.ssh2kex.server.mac),
-                         maxlen)
-        return maxlen
+        pass
 
     def get_ssh_timeframe(self, for_server: Optional[bool] = None) -> 'Timeframe':
         timeframe = Timeframe()
@@ -88,28 +47,15 @@ class Algorithms:
         return timeframe
 
     def get_recommendations(self, software: Optional['Software'], for_server: bool = True) -> Tuple[Optional['Software'], Dict[int, Dict[str, Dict[str, Dict[str, int]]]]]:
-        # pylint: disable=too-many-locals,too-many-statements
         vproducts = [Product.OpenSSH,
                      Product.DropbearSSH,
                      Product.LibSSH,
                      Product.TinySSH]
-        # Set to True if server is not one of vproducts, above.
         unknown_software = False
         if software is not None:
             if software.product not in vproducts:
                 unknown_software = True
 
-        # The code below is commented out because it would try to guess what the server is,
-        # usually resulting in wild & incorrect recommendations.
-        # if software is None:
-        #     ssh_timeframe = self.get_ssh_timeframe(for_server)
-        #     for product in vproducts:
-        #         if product not in ssh_timeframe:
-        #             continue
-        #         version = ssh_timeframe.get_from(product, for_server)
-        #         if version is not None:
-        #             software = SSH.Software(None, product, version, None, None)
-        #             break
         rec: Dict[int, Dict[str, Dict[str, Dict[str, int]]]] = {}
         if software is None:
             unknown_software = True
@@ -149,7 +95,6 @@ class Algorithms:
                         if fc > 0:
                             faults += pow(10, 2 - i) * fc
                     if n not in alg_list:
-                        # Don't recommend certificate or token types; these will only appear in the server's list if they are fully configured & functional on the server.  Also don't recommend 'ext-info-[cs]' nor 'kex-strict-[cs]-v00@openssh.com' key exchanges.
                         if faults > 0 or \
                            (alg_type == 'key' and (('-cert-' in n) or (n.startswith('sk-')))) or \
                            (alg_type == 'kex' and (n.startswith('ext-info-') or n.startswith('kex-strict-'))) or \
@@ -163,7 +108,6 @@ class Algorithms:
                             rec[sshv][alg_type]['chg'][n] = faults
                         else:
                             rec[sshv][alg_type]['del'][n] = faults
-                # If we are working with unknown software, drop all add recommendations, because we don't know if they're valid.
                 if unknown_software:
                     rec[sshv][alg_type]['add'] = {}
                 add_count = len(rec[sshv][alg_type]['add'])
@@ -190,11 +134,11 @@ class Algorithms:
 
         @property
         def sshv(self) -> int:
-            return self.__sshv
+            pass
 
         @property
         def db(self) -> Dict[str, Dict[str, List[List[Optional[str]]]]]:
-            return self.__db
+            pass
 
         def add(self, key: str, value: List[str]) -> None:
             self.__storage[key] = value

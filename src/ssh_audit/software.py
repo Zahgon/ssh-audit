@@ -1,29 +1,5 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2017 Andris Raugulis (moo@arthepsy.eu)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
 import re
 
-# pylint: disable=unused-import
 from typing import Dict, List, Set, Sequence, Tuple, Iterable  # noqa: F401
 from typing import Callable, Optional, Union, Any  # noqa: F401
 
@@ -41,26 +17,25 @@ class Software:
 
     @property
     def vendor(self) -> Optional[str]:
-        return self.__vendor
+        pass
 
     @property
     def product(self) -> str:
-        return self.__product
+        pass
 
     @property
     def version(self) -> str:
-        return self.__version
+        pass
 
     @property
     def patch(self) -> Optional[str]:
-        return self.__patch
+        pass
 
     @property
     def os(self) -> Optional[str]:
-        return self.__os
+        pass
 
     def compare_version(self, other: Union[None, 'Software', str]) -> int:
-        # pylint: disable=too-many-branches,too-many-return-statements
         if other is None:
             return 1
         if isinstance(other, Software):
@@ -73,7 +48,6 @@ class Software:
         else:
             oversion, opatch = other, ''
 
-        # Attempt to parse the versions into floats.
         float_parse_error = False
         selfversion_float = 0.0
         oversion_float = 0.0
@@ -83,7 +57,6 @@ class Software:
         except ValueError:
             float_parse_error = True
 
-        # If the versions could not be parsed into floats, use the old string compare method. This returns incorrect results when comparing modern OpenSSH versions ("9.6" > "10.4" evaluates to True!), but removing this may trigger other bugs, and we have no other good options here, soooo...
         if float_parse_error:
             if self.version < oversion:
                 return -1
@@ -109,7 +82,6 @@ class Software:
                     opatch = mx1.group(1)
                 if mx2 is not None:
                     spatch = mx2.group(1)
-            # OpenBSD version and p1 versions are considered the same.
             if ((spatch == '') and (opatch == '1')) or ((spatch == '1') and (opatch == '')):
                 return 0
         if spatch < opatch:
@@ -119,11 +91,7 @@ class Software:
         return 0
 
     def between_versions(self, vfrom: str, vtill: str) -> bool:
-        if bool(vfrom) and self.compare_version(vfrom) < 0:
-            return False
-        if bool(vtill) and self.compare_version(vtill) > 0:
-            return False
-        return True
+        pass
 
     def display(self, full: bool = True) -> str:
         r = '{} '.format(self.vendor) if bool(self.vendor) else ''
@@ -196,7 +164,6 @@ class Software:
 
     @classmethod
     def parse(cls, banner: 'Banner') -> Optional['Software']:
-        # pylint: disable=too-many-return-statements
         software = str(banner.software)
         mx = re.match(r'^dropbear_([\d\.]+\d+)(.*)', software)
         v: Optional[str] = None

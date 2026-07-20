@@ -1,27 +1,3 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2017-2026 Joe Testa (jtesta@positronsecurity.com)
-   Copyright (C) 2017 Andris Raugulis (moo@arthepsy.eu)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
 import errno
 import os
 import select
@@ -29,7 +5,6 @@ import socket
 import struct
 import sys
 
-# pylint: disable=unused-import
 from typing import Dict, List, Set, Sequence, Tuple, Iterable  # noqa: F401
 from typing import Callable, Optional, Union, Any  # noqa: F401
 
@@ -82,7 +57,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
         socket.gaierror [Errno -2]
             If the hostname cannot be resolved.
         """
-        # If __ip_version_preference has only one entry, then it means that ONLY that IP version should be used.
         if len(self.__ip_version_preference) == 1:
             family = socket.AF_INET if self.__ip_version_preference[0] == 4 else socket.AF_INET6
         else:
@@ -90,7 +64,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
         stype = socket.SOCK_STREAM
         r = socket.getaddrinfo(self.__host, self.__port, family, stype)
 
-        # If the user has a preference for using IPv4 over IPv6 (or vice-versa), then sort the list returned by getaddrinfo() so that the preferred address type comes first.
         if len(self.__ip_version_preference) == 2:
             r = sorted(r, key=lambda x: x[0], reverse=(self.__ip_version_preference[0] == 6))  # pylint: disable=superfluous-parens
         for af, socktype, _proto, _canonname, addr in r:
@@ -104,7 +77,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
         try:
             self.__outputbuffer.d(f"Listening on 0.0.0.0:{self.__port}...", write_now=True)
 
-            # Socket to listen on all IPv4 addresses.
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind(('0.0.0.0', self.__port))
@@ -116,7 +88,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
         try:
             self.__outputbuffer.d(f"Listening on [::]:{self.__port}...", write_now=True)
 
-            # Socket to listen on all IPv6 addresses.
             s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
@@ -126,22 +97,17 @@ class SSH_Socket(ReadBuf, WriteBuf):
         except Exception as e:
             print("Warning: failed to listen on any IPv6 interfaces: %s" % str(e), file=sys.stderr)
 
-        # If we failed to listen on any interfaces, terminate.
         if len(self.__sock_map.keys()) == 0:
             print("Error: failed to listen on any IPv4 and IPv6 interfaces!", file=sys.stderr)
             sys.exit(exitcodes.CONNECTION_ERROR)
 
-        # Wait for an incoming connection.  If a timeout was explicitly
-        # set by the user, terminate when it elapses.
         fds = None
         time_elapsed = 0.0
         interval = 1.0
         while True:
-            # Wait for a connection on either socket.
             fds = select.select(self.__sock_map.keys(), [], [], interval)
             time_elapsed += interval
 
-            # We have incoming data on at least one of the sockets.
             if len(fds[0]) > 0:
                 break
 
@@ -149,7 +115,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
                 print("Timeout elapsed.  Terminating...")
                 sys.exit(exitcodes.CONNECTION_ERROR)
 
-        # Accept the connection.
         c, addr = self.__sock_map[fds[0][0]].accept()
         self.client_host = addr[0]
         self.client_port = addr[1]
@@ -163,7 +128,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
         s = None
 
         try:
-            # If we're connecting to a UNIX socket.
             if self.__host.startswith("unix://"):
                 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 s.settimeout(self.__timeout)
@@ -171,12 +135,10 @@ class SSH_Socket(ReadBuf, WriteBuf):
                 self.__sock = s
                 return None
 
-            # If we're connecting through a SOCKS5 proxy.
             if self.__socks5_proxy is not None:
                 self.__sock = self._connect_via_socks5()
                 return None
 
-            # We're connecting to an Internet host.
             for af, addr in self._resolve():
                 s = socket.socket(af, socket.SOCK_STREAM)
                 s.settimeout(self.__timeout)
@@ -211,13 +173,11 @@ class SSH_Socket(ReadBuf, WriteBuf):
                 buf += chunk
             return buf
 
-        # Parse the "host:port" string into its parts.
         proxy_host, proxy_port = Utils.parse_host_and_port(self.__socks5_proxy) if self.__socks5_proxy is not None else ("", 0)
 
         self.__outputbuffer.d("Connecting to SOCKS5 proxy %s:%d..." % (proxy_host, proxy_port), write_now=True)
         s = socket.create_connection((proxy_host, proxy_port), timeout=self.__timeout)
 
-        # SOCKS5 greeting: version=5, nmethods=1, method=0 (no auth)
         s.sendall(b'\x05\x01\x00')
         resp = __socks5_recv_exact(s, 2)
         if resp is None:
@@ -229,7 +189,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
         if resp[1] != 0:
             raise socket.error("SOCKS5 proxy requires authentication (method {:d}), but only no-auth is supported".format(resp[1]))
 
-        # Set the type and host encoding appropriately, depending on if we're sending a hostname, IPv4, or IPv6 address. The ATYP field is 3 when the client is sending a hostname.
         atyp = 3
         _enc_host = self.__host.encode('idna')
         dst_addr = struct.pack('!B', len(_enc_host)) + _enc_host
@@ -240,19 +199,16 @@ class SSH_Socket(ReadBuf, WriteBuf):
             atyp = 4
             dst_addr = socket.inet_pton(socket.AF_INET6, self.__host)
 
-        # SOCKS5 connect request: version=5, cmd=1 (connect), rsv=0, atyp
         request = struct.pack('!BBBB', 5, 1, 0, atyp) + dst_addr + struct.pack('!H', self.__port)
         self.__outputbuffer.d("Requesting SOCKS5 proxy to connect to %s:%d..." % (self.__host, self.__port), write_now=True)
         s.sendall(request)
 
-        # Read the fixed part of the response (4 bytes: ver, rep, rsv, atyp)
         hdr = __socks5_recv_exact(s, 4)
         if hdr is None:
             raise socket.error("no response from SOCKS5 proxy during connect")
 
         server_version = hdr[0]
         reply = hdr[1]
-        # rsv = hdr[2]  # Reserved, set to 0 as per RFC1928.
         atyp = hdr[3]
 
         if server_version != 5:
@@ -273,7 +229,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
             err = socks5_errors[reply] if reply in socks5_errors else f"unknown error: {reply}"
             raise socket.error("SOCKS5 proxy connect failed: {}".format(err))
 
-        # Read and discard the bound address from the response
         if atyp == 1:    # IPv4
             __socks5_recv_exact(s, 4 + 2)
         elif atyp == 4:  # IPv6
@@ -350,7 +305,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
         except socket.error as e:
             return -1, str(e.args[-1])
 
-    # Send a KEXINIT with the lists of key exchanges, hostkeys, ciphers, MACs, compressions, and languages that we "support".
     def send_kexinit(self, key_exchanges: List[str] = ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'ecdh-sha2-nistp256', 'ecdh-sha2-nistp384', 'ecdh-sha2-nistp521', 'diffie-hellman-group-exchange-sha256', 'diffie-hellman-group16-sha512', 'diffie-hellman-group18-sha512', 'diffie-hellman-group14-sha256'], hostkeys: List[str] = ['rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa', 'ecdsa-sha2-nistp256', 'ssh-ed25519'], ciphers: List[str] = ['chacha20-poly1305@openssh.com', 'aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm@openssh.com', 'aes256-gcm@openssh.com'], macs: List[str] = ['umac-64-etm@openssh.com', 'umac-128-etm@openssh.com', 'hmac-sha2-256-etm@openssh.com', 'hmac-sha2-512-etm@openssh.com', 'hmac-sha1-etm@openssh.com', 'umac-64@openssh.com', 'umac-128@openssh.com', 'hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1'], compressions: List[str] = ['none', 'zlib@openssh.com'], languages: List[str] = ['']) -> None:  # pylint: disable=dangerous-default-value
         '''Sends the list of supported host keys, key exchanges, ciphers, and MACs.  Emulates OpenSSH v8.2.'''
 
@@ -382,7 +336,6 @@ class SSH_Socket(ReadBuf, WriteBuf):
             self.ensure_read(4)
             packet_length = self.read_int()
             header.write_int(packet_length)
-            # XXX: validate length
             self.ensure_read(1)
             padding_length = self.read_byte()
             header.write_byte(padding_length)

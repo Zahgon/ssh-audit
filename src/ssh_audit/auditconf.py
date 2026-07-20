@@ -1,28 +1,3 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2017-2026 Joe Testa (jtesta@positronsecurity.com)
-   Copyright (C) 2017 Andris Raugulis (moo@arthepsy.eu)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
-# pylint: disable=unused-import
 from typing import Dict, List, Set, Sequence, Tuple, Iterable  # noqa: F401
 from typing import Callable, Optional, Union, Any  # noqa: F401
 
@@ -31,7 +6,6 @@ from ssh_audit.utils import Utils
 
 
 class AuditConf:
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, host: str = '', port: int = 22) -> None:
         self.host = host
         self.port = port
@@ -104,40 +78,26 @@ class AuditConf:
                 raise ValueError('invalid number of threads: {}'.format(value))
             value = num_threads
         elif name == "dheat":
-            # Valid values:
-            #   * None
-            #   * "10" (concurrent-connections)
-            #   * "10:diffie-hellman-group18-sha512" (concurrent-connections:target-alg)
-            #   * "10:diffie-hellman-group18-sha512:100" (concurrent-connections:target-alg:e-length)
             valid = True
             if value is not None:
 
                 def _parse_concurrent_connections(s: str) -> int:
-                    if Utils.parse_int(s) < 1:
-                        raise ValueError("number of concurrent connections must be 1 or greater: {}".format(s))
-                    return int(s)
+                    pass
 
                 def _parse_e_length(s: str) -> int:
-                    s_int = Utils.parse_int(s)
-                    if s_int < 2:
-                        raise ValueError("length of e must not be less than 2: {}".format(s))
-                    return s_int
+                    pass
 
                 def _parse_target_alg(s: str) -> str:
-                    if len(s) == 0:
-                        raise ValueError("target algorithm must not be the empty string.")
-                    return s
+                    pass
 
                 value = str(value)
                 fields = value.split(':')
 
                 self.dheat_concurrent_connections = _parse_concurrent_connections(fields[0])
 
-                # Parse the target algorithm if present.
                 if len(fields) >= 2:
                     self.dheat_target_alg = _parse_target_alg(fields[1])
 
-                # Parse the length of e, if present.
                 if len(fields) == 3:
                     self.dheat_e_length = _parse_e_length(fields[2])
 
@@ -155,9 +115,6 @@ class AuditConf:
                 valid = False
 
         elif name == "conn_rate_test":
-            # Valid values:
-            #   * "4" (run rate test with 4 threads)
-            #   * "4:100" (run rate test with 4 threads, targeting 100 connections/second)
 
             error_msg = "valid format for {:s} is \"N\" or \"N:N\", where N is an integer.".format(name)
             self.conn_rate_test_enabled = True

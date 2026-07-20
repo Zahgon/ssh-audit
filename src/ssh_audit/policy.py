@@ -1,26 +1,3 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2020-2025 Joe Testa (jtesta@positronsecurity.com)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
 import copy
 import json
 import sys
@@ -36,7 +13,6 @@ from ssh_audit.globals import SNAP_PACKAGE, SNAP_PERMISSIONS_ERROR
 from ssh_audit.ssh2_kex import SSH2_Kex
 
 
-# Validates policy files and performs policy testing
 class Policy:
 
     WARNING_DEPRECATED_DIRECTIVES = "\nWARNING: this policy is using deprecated features.  Future versions of ssh-audit may remove support for them.  Re-generating the policy file is perhaps the most straight-forward way of resolving this issue.  Manually converting the 'hostkey_size_*', 'cakey_size_*', and 'dh_modulus_size_*' directives into the new format is another option.\n"
@@ -62,13 +38,11 @@ class Policy:
 
         self._name_and_version: str = ''
 
-        # If invoked while JSON output is expected, send warnings to stderr instead of stdout (which would corrupt the JSON output).
         if json_output:
             self._warning_target = sys.stderr
         else:
             self._warning_target = sys.stdout
 
-        # Ensure that only one mode was specified.
         num_modes = 0
         if policy_file is not None:
             num_modes += 1
@@ -91,7 +65,6 @@ class Policy:
                 print("Error: policy file not found: %s" % policy_file)
                 sys.exit(exitcodes.UNKNOWN_ERROR)
             except PermissionError as e:
-                # If installed as a Snap package, print a more useful message with potential work-arounds.
                 if SNAP_PACKAGE:
                     print(SNAP_PERMISSIONS_ERROR)
                 else:
@@ -122,14 +95,12 @@ class Policy:
 
             if key in ['name', 'banner']:
 
-                # If the banner value is blank, set it to "" so that the code below handles it.
                 if len(val) < 2:
                     val = "\"\""
 
                 if (val[0] != '"') or (val[-1] != '"'):
                     raise ValueError('the value for the %s field must be enclosed in quotes: %s' % (key, val))
 
-                # Remove the surrounding quotes, and unescape quotes & newlines.
                 val = val[1:-1]. replace("\\\"", "\"").replace("\\n", "\n")
 
                 if key == 'name':
@@ -144,10 +115,8 @@ class Policy:
                 try:
                     algs = val.split(',')
                 except ValueError:
-                    # If the value has no commas, then set the algorithm list to just the value.
                     algs = [val]
 
-                # Strip whitespace in each algorithm name.
                 algs = [alg.strip() for alg in algs]
 
                 if key == 'compressions':
@@ -191,7 +160,6 @@ class Policy:
             elif key == 'host_key_sizes':  # New host key size format.
                 self._hostkey_sizes = json.loads(val)
 
-                # Fill in the trimmed fields that were omitted from the policy.
                 self._normalize_hostkey_sizes()
 
             elif key.startswith('dh_modulus_size_'):  # Old DH modulus format.
@@ -278,12 +246,10 @@ class Policy:
 
             if kex.host_keys():
 
-                # Make a deep copy of the host keys dict, then delete all the raw hostkey bytes from the copy.
                 host_keys_trimmed = copy.deepcopy(kex.host_keys())
                 for hostkey_alg in host_keys_trimmed:
                     del host_keys_trimmed[hostkey_alg]['raw_hostkey_bytes']
 
-                    # Delete the CA signature if any of its fields are empty.
                     if host_keys_trimmed[hostkey_alg]['ca_key_type'] == '' or host_keys_trimmed[hostkey_alg]['ca_key_size'] == 0:
                         del host_keys_trimmed[hostkey_alg]['ca_key_type']
                         del host_keys_trimmed[hostkey_alg]['ca_key_size']
@@ -348,7 +314,6 @@ macs = %s
             ret = False
             self._append_error('Banner', [self._banner], None, [banner_str])
 
-        # All subsequent tests require a valid kex, so end here if we don't have one.
         if kex is None:
             error_list, error_str = self._get_errors()
             return ret, error_list, error_str
@@ -357,26 +322,21 @@ macs = %s
             ret = False
             self._append_error('Compression', self._compressions, None, kex.server.compression)
 
-        # If a list of optional host keys was given in the policy, remove any of its entries from the list retrieved from the server.  This allows us to do an exact comparison with the expected list below.
         pruned_host_keys = kex.key_algorithms
         if self._optional_host_keys is not None:
             pruned_host_keys = [x for x in kex.key_algorithms if x not in self._optional_host_keys]
 
-        # Check host keys.
         if self._host_keys is not None:
-            # If the policy allows subsets and re-ordered algorithms...
             if self._allow_hostkey_subset_and_reordering:
                 for hostkey_t in kex.key_algorithms:
                     if hostkey_t not in self._host_keys:
                         ret = False
                         self._append_error('Host keys', self._host_keys, self._optional_host_keys, kex.key_algorithms)
                         break
-            # The policy requires exact matching of algorithms.
             elif pruned_host_keys != self._host_keys:
                 ret = False
                 self._append_error('Host keys', self._host_keys, self._optional_host_keys, kex.key_algorithms)
 
-        # Check host key sizes.
         if self._hostkey_sizes is not None:
             hostkey_types = list(self._hostkey_sizes.keys())
             hostkey_types.sort()  # Sorted to make testing output repeatable.
@@ -390,67 +350,54 @@ macs = %s
                         ret = False
                         self._append_error('Host key (%s) sizes' % hostkey_type, [str(expected_hostkey_size)], None, [str(actual_hostkey_size)])
 
-                    # If we have expected CA signatures set, check them against what the server returned.
                     if self._hostkey_sizes is not None and len(cast(str, self._hostkey_sizes[hostkey_type]['ca_key_type'])) > 0 and cast(int, self._hostkey_sizes[hostkey_type]['ca_key_size']) > 0:
                         expected_ca_key_type = cast(str, self._hostkey_sizes[hostkey_type]['ca_key_type'])
                         expected_ca_key_size = cast(int, self._hostkey_sizes[hostkey_type]['ca_key_size'])
                         actual_ca_key_type = cast(str, server_host_keys[hostkey_type]['ca_key_type'])
                         actual_ca_key_size = cast(int, server_host_keys[hostkey_type]['ca_key_size'])
 
-                        # Ensure that the CA signature type is what's expected (i.e.: the server doesn't have an RSA sig when we're expecting an ED25519 sig).
                         if actual_ca_key_type != expected_ca_key_type:
                             ret = False
                             self._append_error('CA signature type', [expected_ca_key_type], None, [actual_ca_key_type])
-                        # Ensure that the actual and expected signature sizes match.
                         elif (self._allow_larger_keys and actual_ca_key_size < expected_ca_key_size) or \
                              (not self._allow_larger_keys and actual_ca_key_size != expected_ca_key_size):
                             ret = False
                             self._append_error('CA signature size (%s)' % actual_ca_key_type, [str(expected_ca_key_size)], None, [str(actual_ca_key_size)])
 
-        # Check key exchanges.
         if self._kex is not None:
-            # If the policy allows subsets and re-ordered algorithms...
             if self._allow_algorithm_subset_and_reordering:
                 for kex_t in kex.kex_algorithms:
                     if kex_t not in self._kex:
                         ret = False
                         self._append_error('Key exchanges', self._kex, None, kex.kex_algorithms)
                         break
-                # If kex-strict-?-v00@openssh.com is in the policy (i.e. the Terrapin vulnerability countermeasure), then it must appear in the server's list, regardless of the "allow_algorithm_subset_and_reordering" flag.
                 if ('kex-strict-s-v00@openssh.com' in self._kex and 'kex-strict-s-v00@openssh.com' not in kex.kex_algorithms) or \
                    ('kex-strict-c-v00@openssh.com' in self._kex and 'kex-strict-c-v00@openssh.com' not in kex.kex_algorithms):
                     ret = False
                     self._append_error('Key exchanges', self._kex, None, kex.kex_algorithms)
 
-            # The policy requires exact matching of algorithms.
             elif kex.kex_algorithms != self._kex:
                 ret = False
                 self._append_error('Key exchanges', self._kex, None, kex.kex_algorithms)
 
-        # Checking Ciphers
         if self._ciphers is not None:
-            # If the policy allows subsets and re-ordered algorithms...
             if self._allow_algorithm_subset_and_reordering:
                 for cipher_t in kex.server.encryption:
                     if cipher_t not in self._ciphers:
                         ret = False
                         self._append_error('Ciphers', self._ciphers, None, kex.server.encryption)
                         break
-            # The policy requires exact matching of algorithms.
             elif kex.server.encryption != self._ciphers:
                 ret = False
                 self._append_error('Ciphers', self._ciphers, None, kex.server.encryption)
 
-        # Checking MACs
         if self._macs is not None:
-            # If the policy allows subsets and re-ordered algorithms...
             if self._allow_algorithm_subset_and_reordering:
                 for mac_t in kex.server.mac:
                     if mac_t not in self._macs:
                         ret = False
                         self._append_error('MACs', self._macs, None, kex.server.mac)
                         break
-            # The policy requires exact matching of algorithms.
             elif kex.server.mac != self._macs:
                 ret = False
                 self._append_error('MACs', self._macs, None, kex.server.mac)
@@ -531,11 +478,9 @@ macs = %s
         latest_client_policies: Dict[str, Dict[str, Union[int, str]]] = {}
         for policy_name, policy in BUILTIN_POLICIES.items():
 
-            # If not in verbose mode, only store the latest version of each policy.
             if not verbose:
                 policy_description = "\"{:s}\"".format(policy_name)
 
-                # Truncate the version off the policy name and obtain the version as an integer. (i.e.: "Platform X (version 3)" -> "Platform X", 3
                 policy_name_no_version = ""
                 version = 0
                 version_pos = policy_name.find(" (version ")
@@ -558,7 +503,6 @@ macs = %s
                 else:
                     client_policy_descriptions.append(policy_description)
 
-        # Now that we have references to the latest policies only, add their full descriptions to the lists for returning.
         if not verbose:
             for _, dd in latest_server_policies.items():
                 server_policy_descriptions.append(cast(str, dd['description']))
@@ -566,7 +510,6 @@ macs = %s
             for _, dd in latest_client_policies.items():
                 client_policy_descriptions.append(cast(str, dd['description']))
 
-        # Sort the lists for better readability.
         server_policy_descriptions.sort()
         client_policy_descriptions.sort()
         return server_policy_descriptions, client_policy_descriptions
@@ -595,10 +538,8 @@ macs = %s
             p._name_and_version = "%s (version %s)" % (p._name, p._version)  # pylint: disable=protected-access
             p._allow_hostkey_subset_and_reordering = cast(bool, policy_struct['allow_hostkey_subset_and_reordering']) if 'allow_hostkey_subset_and_reordering' in policy_struct else False  # pylint: disable=protected-access
 
-            # Ensure this struct has all the necessary fields.
             p._normalize_hostkey_sizes()  # pylint: disable=protected-access
 
-        # Now check if an updated version of the requested policy exists.  If so, set a warning for the user.
         if p is not None and p._version is not None:  # pylint: disable=protected-access
             next_version = str(int(p._version) + 1)  # pylint: disable=protected-access
             name_version_pos = policy_name.find("(version ")

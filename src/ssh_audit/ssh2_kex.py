@@ -1,27 +1,3 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2017-2024 Joe Testa (jtesta@positronsecurity.com)
-   Copyright (C) 2017 Andris Raugulis (moo@arthepsy.eu)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
 from typing import Dict, List
 from typing import Union
 
@@ -47,33 +23,31 @@ class SSH2_Kex:
 
     @property
     def cookie(self) -> bytes:
-        return self.__cookie
+        pass
 
     @property
     def kex_algorithms(self) -> List[str]:
-        return self.__kex_algs
+        pass
 
     @property
     def key_algorithms(self) -> List[str]:
-        return self.__key_algs
+        pass
 
-    # client_to_server
     @property
     def client(self) -> 'SSH2_KexParty':
-        return self.__client
+        pass
 
-    # server_to_client
     @property
     def server(self) -> 'SSH2_KexParty':
-        return self.__server
+        pass
 
     @property
     def follows(self) -> bool:
-        return self.__follows
+        pass
 
     @property
     def unused(self) -> int:
-        return self.__unused
+        pass
 
     def set_dh_modulus_size(self, gex_alg: str, modulus_size: int) -> None:
         self.__dh_modulus_sizes[gex_alg] = modulus_size
@@ -108,9 +82,7 @@ class SSH2_Kex:
 
     @property
     def payload(self) -> bytes:
-        wbuf = WriteBuf()
-        self.write(wbuf)
-        return wbuf.write_flush()
+        pass
 
     @classmethod
     def parse(cls, outputbuffer: 'OutputBuffer', payload: bytes) -> 'SSH2_Kex':

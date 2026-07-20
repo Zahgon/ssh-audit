@@ -1,32 +1,7 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2017-2026 Joe Testa (jtesta@positronsecurity.com)
-   Copyright (C) 2017 Andris Raugulis (moo@arthepsy.eu)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
 import ipaddress
 import re
 import sys
 
-# pylint: disable=unused-import
 from typing import Dict, List, Set, Sequence, Tuple, Iterable  # noqa: F401
 from typing import Callable, Optional, Union, Any  # noqa: F401
 
@@ -38,11 +13,7 @@ class Utils:
 
     @classmethod
     def to_bytes(cls, v: Union[bytes, str], enc: str = 'utf-8') -> bytes:
-        if isinstance(v, bytes):
-            return v
-        elif isinstance(v, str):
-            return v.encode(enc)
-        raise cls._type_err(v, 'bytes')
+        pass
 
     @classmethod
     def to_text(cls, v: Union[str, bytes], enc: str = 'utf-8') -> str:
@@ -80,11 +51,11 @@ class Utils:
 
     @classmethod
     def is_ascii(cls, v: str) -> bool:
-        return cls._is_ascii(v)
+        pass
 
     @classmethod
     def to_ascii(cls, v: str, errors: str = 'replace') -> str:
-        return cls._to_ascii(v, errors=errors)
+        pass
 
     @classmethod
     def is_print_ascii(cls, v: str) -> bool:
@@ -96,16 +67,7 @@ class Utils:
 
     @classmethod
     def unique_seq(cls, seq: Sequence[Any]) -> Sequence[Any]:
-        seen: Set[Any] = set()
-
-        def _seen_add(x: Any) -> bool:
-            seen.add(x)
-            return False
-
-        if isinstance(seq, tuple):
-            return tuple(x for x in seq if x not in seen and not _seen_add(x))
-        else:
-            return [x for x in seq if x not in seen and not _seen_add(x)]
+        pass
 
     @classmethod
     def ctoi(cls, c: Union[str, int]) -> int:
@@ -123,10 +85,7 @@ class Utils:
 
     @staticmethod
     def parse_float(v: Any) -> float:
-        try:
-            return float(v)
-        except ValueError:
-            return -1.0
+        pass
 
     @staticmethod
     def parse_host_and_port(host_and_port: str, default_port: int = 22) -> Tuple[str, int]:
@@ -134,7 +93,6 @@ class Utils:
         host = host_and_port
         port = default_port
 
-        # If we have a UNIX socket path, do no further processing.
         if host.startswith("unix://"):
             return host, 1
 

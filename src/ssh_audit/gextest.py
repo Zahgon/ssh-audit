@@ -1,30 +1,6 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2017-2025 Joe Testa (jtesta@positronsecurity.com)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
 import struct
 import traceback
 
-# pylint: disable=unused-import
 from typing import Dict, List, Set, Sequence, Tuple, Iterable  # noqa: F401
 from typing import Callable, Optional, Union, Any  # noqa: F401
 
@@ -38,11 +14,8 @@ from ssh_audit.outputbuffer import OutputBuffer
 from ssh_audit import exitcodes
 
 
-# Performs DH group exchanges to find what moduli are supported, and checks
-# their size.
 class GEXTest:
 
-    # Creates a new connection to the server.  Returns True on success, or False.
     @staticmethod
     def reconnect(out: 'OutputBuffer', s: 'SSH_Socket', kex: 'SSH2_Kex', gex_alg: str) -> bool:
         if s.is_connected():
@@ -59,12 +32,9 @@ class GEXTest:
             s.close()
             return False
 
-        # Send our KEX using the specified group-exchange and most of the
-        # server's own values.
         s.send_kexinit(key_exchanges=[gex_alg], hostkeys=kex.key_algorithms, ciphers=kex.server.encryption, macs=kex.server.mac, compressions=kex.server.compression, languages=kex.server.languages)
 
         try:
-            # Parse the server's KEX.
             _, payload = s.read_packet()
             SSH2_Kex.parse(out, payload)
         except (KexDHException, struct.error):
@@ -95,8 +65,6 @@ class GEXTest:
             'diffie-hellman-group-exchange-sha256': KexGroupExchange_SHA256,
         }
 
-        # Check if the server supports any of the group-exchange
-        # algorithms.  If so, test each one.
         for gex_alg, kex_group_class in GEX_ALGS.items():
             if gex_alg not in kex.kex_algorithms:
                 out.d('Server does not support the algorithm "' + gex_alg + '".', write_now=True)
@@ -104,11 +72,6 @@ class GEXTest:
                 kex_group = kex_group_class(out)
                 out.d('Preparing to perform DH group exchange using ' + gex_alg + ' with min, pref and max modulus sizes of ' + str(bits_min) + ' bits, ' + str(bits_pref) + ' bits and ' + str(bits_max) + ' bits...', write_now=True)
 
-                # It has been observed that reconnecting to some SSH servers
-                # multiple times in quick succession can eventually result
-                # in a "connection reset by peer" error. It may be possible
-                # to recover from such an error by sleeping for some time
-                # before continuing to issue reconnects.
                 modulus_size_returned, reconnect_failed = GEXTest._send_init(out, s, kex_group, kex, gex_alg, bits_min, bits_pref, bits_max)
                 if reconnect_failed:
                     out.fail('Reconnect failed.')
@@ -123,7 +86,6 @@ class GEXTest:
 
         return retval
 
-    # Runs the DH moduli test against the specified target.
     @staticmethod
     def run(out: 'OutputBuffer', s: 'SSH_Socket', banner: Optional['Banner'], kex: 'SSH2_Kex') -> None:
         GEX_ALGS = {
@@ -131,14 +93,9 @@ class GEXTest:
             'diffie-hellman-group-exchange-sha256': KexGroupExchange_SHA256,
         }
 
-        # The previous RSA tests put the server in a state we can't
-        # test.  So we need a new connection to start with a clean
-        # slate.
         if s.is_connected():
             s.close()
 
-        # Check if the server supports any of the group-exchange
-        # algorithms.  If so, test each one.
         for gex_alg, kex_group_class in GEX_ALGS.items():  # pylint: disable=too-many-nested-blocks
             if gex_alg in kex.kex_algorithms:
                 out.d('Preparing to perform DH group exchange using ' + gex_alg + ' with min, pref and max modulus sizes of 512 bits, 1024 bits and 1536 bits...', write_now=True)
@@ -148,18 +105,14 @@ class GEXTest:
                 if reconnect_failed:
                     break
 
-                # Try an array of specific modulus sizes... one at a time.
                 reconnect_failed = False
                 for bits in [512, 768, 1024, 1536, 2048, 3072, 4096]:
 
-                    # If we found one modulus size already, but we're about
-                    # to test a larger one, don't bother.
                     if bits >= smallest_modulus > 0:
                         break
 
                     smallest_modulus, reconnect_failed = GEXTest._send_init(out, s, kex_group, kex, gex_alg, bits, bits, bits)
 
-                # If the banner exists, then parse it into a Software object.  Next, if the target host is OpenSSH, check if its version is 9.9 or less; these versions are known to have a GEX fallback mechanism.
                 software = None if banner is None else Software.parse(banner)
                 is_openssh = False
                 has_fallback_mechanism = False
@@ -172,7 +125,6 @@ class GEXTest:
                     except ValueError:
                         pass
 
-                # If the smallest modulus is 2048 and the server is OpenSSH v9.9 or less, then we may have triggered the fallback mechanism, which tends to happen in testing scenarios such as this but not in most real-world conditions.  To better test this condition, we will do an additional check to see if the server supports sizes between 2048 and 4096, and consider this the definitive result.
                 openssh_test_updated = False
                 if (smallest_modulus == 2048) and is_openssh and has_fallback_mechanism:
                     out.d('First pass found a minimum GEX modulus of 2048 against OpenSSH server.  Performing a second pass to get a more accurate result...')
@@ -185,42 +137,30 @@ class GEXTest:
 
                     lst = SSH2_KexDB.get_db()['kex'][gex_alg]
 
-                    # We flag moduli smaller than 2048 as a failure.
                     if smallest_modulus < 2048:
                         text = 'using small %d-bit modulus' % smallest_modulus
 
-                        # For 'diffie-hellman-group-exchange-sha256', add
-                        # a failure reason.
                         if len(lst) == 1:
                             lst.append([text])
-                        # For 'diffie-hellman-group-exchange-sha1', delete
-                        # the existing failure reason (which is vague), and
-                        # insert our own.
                         else:
                             del lst[1]
                             lst.insert(1, [text])
 
-                    # Moduli smaller than 3072 get flagged as a warning.
                     elif smallest_modulus < 3072:
 
-                        # Ensure that a warning list exists for us to append to, below.
                         while len(lst) < 3:
                             lst.append([])
 
-                        # Ensure this is only added once.
                         text = '2048-bit modulus only provides 112-bits of symmetric strength'
                         if text not in lst[2]:
                             lst[2].append(text)
 
-                    # If we retested against OpenSSH (because its fallback mechanism was triggered), add a special note for the user.
                     if openssh_test_updated:
                         text = "OpenSSH's GEX fallback mechanism was triggered during testing. Very old SSH clients will still be able to create connections using a 2048-bit modulus, though modern clients will use %u. This can only be disabled by recompiling the code (see https://github.com/openssh/openssh-portable/blob/V_9_4/dh.c#L477)." % smallest_modulus
 
-                        # Ensure that an info list exists for us to append to, below.
                         while len(lst) < 4:
                             lst.append([])
 
-                        # Ensure this is only added once.
                         if text not in lst[3]:
                             lst[3].append(text)
 

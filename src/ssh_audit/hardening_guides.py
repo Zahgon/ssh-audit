@@ -1,26 +1,3 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2025-2026 Joe Testa (jtesta@positronsecurity.com)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
 from typing import Any, Dict
 
 from ssh_audit.outputbuffer import OutputBuffer
@@ -656,7 +633,6 @@ class Hardening_Guides:
         server_guide_names = []
         client_guide_names = []
 
-        # Iterate through the guides, and record a list of server guide names, along with a separate list for client guide names.
         for name, guides in Hardening_Guides.HARDENING_GUIDES.items():
             for guide in guides:
                 version = guide["version"]
@@ -671,11 +647,9 @@ class Hardening_Guides:
                     if full_name not in client_guide_names:
                         client_guide_names.append(full_name)
 
-        # Sort the names.
         server_guide_names.sort()
         client_guide_names.sort()
 
-        # Print the lists.
         out.head("\nServer hardening guides:\n")
         out.info("  * %s" % "\n  * ".join(server_guide_names))
 
@@ -696,7 +670,6 @@ class Hardening_Guides:
         platform_orig = platform
         invalid_guide_name_error = "Invalid guide name.  Run --list-hardening-guides to see list of valid guide names."
 
-        # If the user provided a version with the platform name, parse the version number they're interested in.
         use_latest_version = True
         use_version = 0
         pos = platform.find(" (version ")
@@ -716,11 +689,9 @@ class Hardening_Guides:
             out.fail(invalid_guide_name_error, write_now=True)
             return
 
-        # From input such as "Ubuntu 24.04 Server", parse the OS name ("Ubuntu 24.04") and last word ("Server").
         os_name = platform[0:last_space_pos]
         last_word = platform[last_space_pos + 1:]
 
-        # Determine if this is a server or client guide.
         is_server = False
         if last_word == "Server":
             is_server = True
@@ -728,15 +699,12 @@ class Hardening_Guides:
             out.fail(invalid_guide_name_error, write_now=True)
             return
 
-        # Ensure that this OS exists in the database.
         if os_name not in Hardening_Guides.HARDENING_GUIDES:
             out.fail(invalid_guide_name_error, write_now=True)
             return
 
-        # Pull all guides for this OS name.
         guides = Hardening_Guides.HARDENING_GUIDES[os_name]
 
-        # Iterate over guides until we find the type (server/client) we need, as well as the version of the guide we need.
         selected_guide = None
         latest_version = 0
         for guide in guides:
@@ -748,12 +716,10 @@ class Hardening_Guides:
                 elif use_latest_version is False and use_version == version:
                     selected_guide = guide
 
-        # Ensure we found a guide from above.
         if selected_guide is None:
             out.fail(invalid_guide_name_error, write_now=True)
             return
 
-        # Now print the guide.
         version_header = f"\n#\n# Hardening guide for {platform_orig}\n#\n" if not use_latest_version else f"\n#\n# Hardening guide for {platform_orig} (version {latest_version})\n#\n"
         out.info(version_header)
 

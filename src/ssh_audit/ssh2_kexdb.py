@@ -1,28 +1,3 @@
-"""
-   The MIT License (MIT)
-
-   Copyright (C) 2017-2026 Joe Testa (jtesta@positronsecurity.com)
-   Copyright (C) 2017 Andris Raugulis (moo@arthepsy.eu)
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-   THE SOFTWARE.
-"""
-# pylint: disable=unused-import
 import copy
 import threading
 
@@ -81,16 +56,13 @@ class SSH2_KexDB:  # pylint: disable=too-few-public-methods
     INFO_EXTENSION_NEGOTIATION = 'pseudo-algorithm that denotes the peer supports RFC8308 extensions'
     INFO_STRICT_KEX = 'pseudo-algorithm that denotes the peer supports a stricter key exchange method as a counter-measure to the Terrapin attack (CVE-2023-48795)'
 
-    # NIST PQC security levels: https://blog.cloudflare.com/pq-2025/
     INFO_NIST_PQC_LEVEL_2 = 'rated at NIST PQC level 2 (at least as hard to break as SHA256)'
     INFO_NIST_PQC_LEVEL_3 = 'rated at NIST PQC level 3 (at least as hard to break as AES-192)'
     INFO_NIST_PQC_LEVEL_5 = 'rated at NIST PQC level 5 (at least as hard to break as AES-256)'
 
-    # Maintains a dictionary per calling thread that yields its own copy of MASTER_DB.  This prevents results from one thread polluting the results of another thread.
     DB_PER_THREAD: Dict[int, Dict[str, Dict[str, List[List[Optional[str]]]]]] = {}
 
     MASTER_DB: Dict[str, Dict[str, List[List[Optional[str]]]]] = {
-        # Format: 'algorithm_name': [['version_first_appeared_in'], [reason_for_failure1, reason_for_failure2, ...], [warning1, warning2, ...], [info1, info2, ...]]
         'kex': {
             'Curve25519SHA256': [[], [], [WARN_NOT_PQ_SAFE]],
             'curve25519-sha256': [['7.4,d2018.76'], [], [WARN_NOT_PQ_SAFE], [INFO_DEFAULT_OPENSSH_KEX_74_TO_89]],
@@ -138,7 +110,6 @@ class SSH2_KexDB:  # pylint: disable=too-few-public-methods
             'ecdh-sha2-1.3.132.0.37': [[], [FAIL_NSA_BACKDOORED_CURVE], [WARN_NOT_PQ_SAFE]],  # sect409r1
             'ecdh-sha2-1.3.132.0.38': [[], [FAIL_UNPROVEN], [WARN_NOT_PQ_SAFE]],  # sect571k1
 
-            # Note: the base64 strings, according to draft 6 of RFC5656, is Base64(MD5(DER(OID))).  The final RFC5656 dropped the base64 strings in favor of plain OID concatenation, but apparently some SSH servers implement them anyway.  See: https://datatracker.ietf.org/doc/html/draft-green-secsh-ecc-06#section-9.2
             'ecdh-sha2-4MHB+NBt3AlaSRQ7MnB4cg==': [[], [FAIL_UNPROVEN, FAIL_SMALL_ECC_MODULUS], [WARN_NOT_PQ_SAFE]],  # sect163k1
             'ecdh-sha2-5pPrSUQtIaTjUSt5VZNBjg==': [[], [FAIL_SMALL_ECC_MODULUS, FAIL_NSA_BACKDOORED_CURVE], [WARN_NOT_PQ_SAFE]],  # NIST P-192 / secp192r1
             'ecdh-sha2-9UzNcgwTlEnSCECZa7V1mw==': [[], [FAIL_NSA_BACKDOORED_CURVE], [WARN_NOT_PQ_SAFE]],  # NIST P-256 / secp256r1
@@ -173,7 +144,6 @@ class SSH2_KexDB:  # pylint: disable=too-few-public-methods
             'kex-strict-c-v00@openssh.com': [[], [], [], [INFO_STRICT_KEX]],  # Strict KEX marker (countermeasure for CVE-2023-48795).
             'kex-strict-s-v00@openssh.com': [[], [], [], [INFO_STRICT_KEX]],  # Strict KEX marker (countermeasure for CVE-2023-48795).
 
-            # The GSS kex algorithms get special wildcard handling, since they include variable base64 data after their standard prefixes.
             'gss-13.3.132.0.10-sha256-*': [[], [FAIL_UNKNOWN], [WARN_NOT_PQ_SAFE]],
             'gss-curve25519-sha256-*': [[], [], [WARN_NOT_PQ_SAFE]],
             'gss-curve448-sha512-*': [[], [], [WARN_NOT_PQ_SAFE]],
